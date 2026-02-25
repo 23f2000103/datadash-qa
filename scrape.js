@@ -19,20 +19,35 @@ const urls = [
   let grandTotal = 0;
 
   for (const url of urls) {
-    await page.goto(url, { waitUntil: 'networkidle' });
+    try {
+      console.log(`Visiting: ${url}`);
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
 
-    const numbers = await page.$$eval('table td, table th', cells =>
-      cells
-        .map(c => c.innerText.trim())
+      // Debug: print page title and raw table content
+      const title = await page.title();
+      console.log(`  Page title: ${title}`);
+
+      const tableCount = await page.$$eval('table', t => t.length);
+      console.log(`  Tables found: ${tableCount}`);
+
+      const allCellText = await page.$$eval('table td, table th', cells =>
+        cells.map(c => c.innerText.trim())
+      );
+      console.log(`  All cell text: ${JSON.stringify(allCellText.slice(0, 20))}`);
+
+      const numbers = allCellText
         .filter(t => /^-?\d+(\.\d+)?$/.test(t))
-        .map(Number)
-    );
+        .map(Number);
 
-    const pageSum = numbers.reduce((a, b) => a + b, 0);
-    console.log(`${url} → ${numbers.length} numbers, sum = ${pageSum}`);
-    grandTotal += pageSum;
+      const pageSum = numbers.reduce((a, b) => a + b, 0);
+      console.log(`  Numbers found: ${numbers.length}, Page sum: ${pageSum}`);
+      grandTotal += pageSum;
+
+    } catch (err) {
+      console.log(`  ERROR on ${url}: ${err.message}`);
+    }
   }
 
   await browser.close();
-  console.log(`\nGRAND TOTAL: ${grandTotal}`);
+  console.log(`GRAND TOTAL: ${grandTotal}`);
 })();
