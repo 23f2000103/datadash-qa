@@ -25,4 +25,4 @@ jobs:
           npx playwright install chromium --with-deps
 
       - name: Run scraper and sum all tables
-        run: node scrape.js
+        run: node $GITHUB_WORKSPACE/scrape.js
