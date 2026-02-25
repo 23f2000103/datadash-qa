@@ -1,0 +1,99 @@
+name: DataDash QA Automation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scrape-and-sum:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright - 23f2000103@ds.study.iitm.ac.in
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install chromium --with-deps
+
+      - name: Run scraper and sum all tables
+        run: |
+          cat << 'EOF' > scrape.js
+          const { chromium } = require('playwright');
+
+          const urls = [
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/66',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/67',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/68',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/69',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/70',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/71',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/72',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/73',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/74',
+            'https://exam.sanand.workers.dev/tds2025/ga4/seed/75',
+          ];
+
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            let grandTotal = 0;
+
+            for (const url of urls) {
+              await page.goto(url, { waitUntil: 'networkidle' });
+
+              const numbers = await page.$$eval('table td, table th', cells =>
+                cells
+                  .map(c => c.innerText.trim())
+                  .filter(t => /^-?\d+(\.\d+)?$/.test(t))
+                  .map(Number)
+              );
+
+              const pageSum = numbers.reduce((a, b) => a + b, 0);
+              console.log(`${url} → ${numbers.length} numbers, sum = ${pageSum}`);
+              grandTotal += pageSum;
+            }
+
+            await browser.close();
+            console.log(`\nGRAND TOTAL: ${grandTotal}`);
+          })();
+          EOF
+          node scrape.js
+```
+
+---
+
+### Step 3: Get your GitHub Personal Access Token
+
+1. Go to [github.com/settings/tokens/new](https://github.com/settings/tokens/new)
+2. Give it a name like `datadash-token`
+3. Set expiration to **30 days**
+4. Under **Select scopes**, tick:
+   - `repo` (full)
+   - `workflow`
+   - `read:org` (optional)
+5. Click **Generate token** and copy it immediately — you won't see it again
+
+---
+
+### Step 4: Trigger the Action
+
+Once you commit the `qa.yml` file, the action runs automatically. You can also trigger it manually via **Actions → Run workflow**.
+
+Go to the **Actions** tab in your repo to watch it run and see the `GRAND TOTAL` printed in the logs.
+
+---
+
+### Step 5: Submit
+
+Your answer format will be:
+```
+https://github.com/yourusername/datadash-qa ghp_xxxxxxxxxxxxxxxxxxxx
